@@ -16,7 +16,8 @@ async fn main() {
     let app = Router::new()
         .route("/", get(health_check))
         .route("/version", get(version))
-        .route("/preview/citation", post(preview_citation));
+        .route("/preview/citation", post(preview_citation))
+        .route("/preview/bibliography", post(preview_bibliography));
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     println!("listening on {}", addr);
@@ -49,7 +50,7 @@ struct PreviewResponse {
 
 async fn preview_citation(Json(payload): Json<PreviewRequest>) -> Json<PreviewResponse> {
     // 1. Convert Vec<Reference> to Bibliography (IndexMap)
-    let mut bib: Bibliography = payload.references
+    let bib: Bibliography = payload.references
         .into_iter()
         .map(|r| (r.id.clone(), r))
         .collect();
@@ -71,6 +72,27 @@ async fn preview_citation(Json(payload): Json<PreviewRequest>) -> Json<PreviewRe
     let result = match processor.process_citation(&citation) {
         Ok(res) => res,
         Err(e) => format!("Error: {}", e),
+    };
+
+    Json(PreviewResponse { result })
+}
+
+async fn preview_bibliography(Json(payload): Json<PreviewRequest>) -> Json<PreviewResponse> {
+    let bib: Bibliography = payload.references
+        .into_iter()
+        .map(|r| (r.id.clone(), r))
+        .collect();
+
+    let processor = Processor::new(payload.style, bib);
+    let output = processor.process_references();
+    
+    // Simple join of entries for now, typically this would be a list
+    let result = match output.bibliography.is_empty() {
+        true => String::new(),
+        false => output.bibliography.iter()
+            .map(|entry| csln_processor::citation_to_string(entry, None, None, None, None))
+            .collect::<Vec<String>>()
+            .join("\n")
     };
 
     Json(PreviewResponse { result })
