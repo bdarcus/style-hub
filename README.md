@@ -5,7 +5,6 @@ A web-based style editor for finding, accessing, modifying and creating citation
 ## Project Structure
 
 - `server/`: Rust backend API server (using Axum) that interfaces with `csln_core` and `csln_processor`.
-- `server/`: Rust backend API server (using Axum) that interfaces with `csln_core` and `csln_processor`.
 - `client/`: React + Vite frontend application with Tailwind CSS v4.
 
 ## Client (Frontend)
