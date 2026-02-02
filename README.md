@@ -5,7 +5,31 @@ A web-based style editor for finding, accessing, modifying and creating citation
 ## Project Structure
 
 - `server/`: Rust backend API server (using Axum) that interfaces with `csln_core` and `csln_processor`.
-- `client/`: (Planned) Frontend web application.
+- `server/`: Rust backend API server (using Axum) that interfaces with `csln_core` and `csln_processor`.
+- `client/`: React + Vite frontend application with Tailwind CSS v4.
+
+## Client (Frontend)
+
+![Citation Style Editor Preview](client/public/screenshot.png)
+
+The frontend is a modern React application designed for an intuitive, premium academic experience.
+
+### Features
+- **Style Hub**: Find and manage CSL styles.
+- **Visual Wizard**: Step-by-step creation of new styles with live document preview.
+- **Detailed Previews**: Comprehensive citation and bibliography verification.
+- **Design Tokens**: Powered by Tailwind CSS v4 for a sleek, responsive UI.
+
+### Running the Client
+Prerequisites: Node.js (v18+).
+
+```bash
+cd client
+npm install
+npm run dev
+```
+Proxying is configured to forward `/api` requests to the local Rust server.
+
 
 ## Server
 
