@@ -13,7 +13,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     };
 
     return (
-        <div className="bg-background-light dark:bg-background-dark text-text-main antialiased min-h-screen flex flex-col font-display">
+        <div className="bg-background-light text-text-main antialiased min-h-screen flex flex-col font-display">
             <header className="sticky top-0 z-50 w-full bg-surface-light border-b border-border-light">
                 <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between">
