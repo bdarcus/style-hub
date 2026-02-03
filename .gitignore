@@ -1,2 +1,27 @@
+# Rust
 /target
+/server/target
+**/*.rs.bk
+
+# Node
+node_modules
+/client/node_modules
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+*.lock
+!package-lock.json
+
+# SvelteKit
+.svelte-kit
+/client/.svelte-kit
+.env
+.env.*
+!.env.example
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Logs
+*.log
