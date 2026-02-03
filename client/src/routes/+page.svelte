@@ -1,8 +1,10 @@
 <script lang="ts">
     import { intent } from '$lib/stores/intent';
     import { bookmarks, toggleBookmark } from '$lib/stores/bookmarks';
+    import { onMount } from 'svelte';
 
     let searchQuery = $state('');
+    let previews = $state<Record<string, string>>({});
 
     const allStyles = [
         { 
@@ -36,6 +38,41 @@
             ? allStyles.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()) || s.type.toLowerCase().includes(searchQuery.toLowerCase()))
             : allStyles
     );
+
+    function getStyleDefinition(id: string) {
+        if (id === 'apa') return { info: { title: 'APA' }, citation: { "use-preset": "apa" }, bibliography: { "use-preset": "apa" } };
+        if (id === 'nature') return { info: { title: 'Nature' }, citation: { "use-preset": "ieee" }, bibliography: { "use-preset": "ieee" } };
+        if (id === 'chicago') return { info: { title: 'Chicago' }, citation: { "use-preset": "chicago-author-date" }, bibliography: { "use-preset": "chicago-author-date" } };
+        return { info: { title: 'Unknown' }, citation: { "use-preset": "apa" }, bibliography: { "use-preset": "apa" } };
+    }
+
+    onMount(async () => {
+        try {
+            const res = await fetch('/references');
+            const data = await res.json();
+            const refList = Object.entries(data).map(([id, ref]: [string, any]) => ({ ...ref, id }));
+            
+            if (refList.length > 0) {
+                 // Pick a book for better citation variety
+                 const ref = refList.find(r => r.type === 'book') || refList[0];
+                 
+                 for (const style of allStyles) {
+                     const styleDef = getStyleDefinition(style.id);
+                     fetch('/preview/citation', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ style: styleDef, references: [ref] })
+                     })
+                     .then(r => r.json())
+                     .then(data => {
+                         if (data.result) previews[style.id] = data.result;
+                     });
+                 }
+            }
+        } catch (e) {
+            console.error("Failed to fetch references or previews", e);
+        }
+    });
 </script>
 
 <!-- Hero Section -->
@@ -118,7 +155,7 @@
                         <div class="flex flex-col gap-2">
                             <span class="text-[10px] uppercase font-black tracking-widest text-slate-400">Preview</span>
                             <div class="font-serif text-sm leading-relaxed text-slate-700">
-                                {@html style.preview}
+                                {@html previews[style.id] || style.preview}
                             </div>
                         </div>
                         <div class="mt-auto pt-6 flex gap-3 border-t border-slate-100">

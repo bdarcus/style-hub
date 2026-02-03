@@ -1,18 +1,52 @@
 use axum::{
+    extract::State,
     routing::{get, post},
     Router,
     Json,
 };
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::collections::HashMap;
 use serde_json::{Value, json};
 use csln_core::Style;
 use csln_processor::{Processor, Reference, Bibliography, Citation, CitationItem};
 use serde::{Deserialize, Serialize};
 use intent_engine::{StyleIntent, DecisionPackage};
 
+struct AppState {
+    references: HashMap<String, Reference>,
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
+
+    // Load references from YAML
+    // Check multiple potential locations for the file
+    let possible_paths = [
+        "server/resources/comprehensive.yaml",
+        "resources/comprehensive.yaml",
+        "../resources/comprehensive.yaml",
+    ];
+
+    let mut ref_path = "server/resources/comprehensive.yaml";
+    for path in possible_paths {
+        if std::path::Path::new(path).exists() {
+            ref_path = path;
+            break;
+        }
+    }
+    
+    println!("Loading references from: {}", ref_path);
+
+    let f = std::fs::File::open(ref_path).expect("Failed to open comprehensive.yaml references");
+    let references: HashMap<String, Reference> = serde_yaml::from_reader(f).expect("Failed to parse comprehensive.yaml");
+
+    let state = Arc::new(AppState {
+        references: references.clone()
+    });
+    
+    println!("Loaded {} references.", references.len());
 
     let app = Router::new()
         .route("/", get(health_check))
@@ -20,7 +54,9 @@ async fn main() {
         .route("/preview/citation", post(preview_citation))
         .route("/preview/bibliography", post(preview_bibliography))
         .route("/api/v1/decide", post(decide_handler))
-        .route("/api/v1/generate", post(generate_handler));
+        .route("/api/v1/generate", post(generate_handler))
+        .with_state(state)
+        .layer(tower_http::cors::CorsLayer::permissive());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     println!("listening on {}", addr);
@@ -55,7 +91,7 @@ async fn preview_citation(Json(payload): Json<PreviewRequest>) -> Json<PreviewRe
     // 1. Convert Vec<Reference> to Bibliography (IndexMap)
     let bib: Bibliography = payload.references
         .into_iter()
-        .map(|r| (r.id.clone(), r))
+        .map(|r| (r.id().clone().unwrap_or_default(), r))
         .collect();
 
     // 2. Identify IDs to cite (for now just cite them all)
@@ -83,7 +119,7 @@ async fn preview_citation(Json(payload): Json<PreviewRequest>) -> Json<PreviewRe
 async fn preview_bibliography(Json(payload): Json<PreviewRequest>) -> Json<PreviewResponse> {
     let bib: Bibliography = payload.references
         .into_iter()
-        .map(|r| (r.id.clone(), r))
+        .map(|r| (r.id().clone().unwrap_or_default(), r))
         .collect();
 
     let processor = Processor::new(payload.style, bib);
@@ -107,9 +143,61 @@ async fn preview_bibliography(Json(payload): Json<PreviewRequest>) -> Json<Previ
 /// 1. What is missing?
 /// 2. What is the next logical question to ask?
 /// 3. What are the preview options for that question?
-async fn decide_handler(Json(intent): Json<StyleIntent>) -> Json<DecisionPackage> {
+async fn decide_handler(
+    State(state): State<Arc<AppState>>,
+    Json(intent): Json<StyleIntent>
+) -> Json<DecisionPackage> {
     // Call the engine to determine the next decision based on current intent
-    let package = intent.decide();
+    let mut package = intent.decide();
+
+    // Generate real preview using the processor
+    let style = intent.to_style();
+    
+    // Convert HashMap to Bibliography (IndexMap)
+    let bib: Bibliography = state.references.iter()
+        .map(|(k, v)| (k.clone(), v.clone()))
+        .collect();
+
+    // Pick a few references to cite for the preview
+    // Ideally we pick diverse types (book, article, etc.)
+    let cite_ids: Vec<String> = bib.keys().take(3).cloned().collect();
+
+    if !cite_ids.is_empty() {
+        let processor = Processor::new(style, bib);
+        let citation = Citation {
+            id: Some("preview-1".to_string()),
+            items: cite_ids.into_iter().map(|id| CitationItem { id, ..Default::default() }).collect(),
+            ..Default::default()
+        };
+
+        match processor.process_citation(&citation) {
+            Ok(res) => {
+                if !res.trim().is_empty() {
+                    let mut html = format!("<div class='live-preview-content'><div class='preview-citation'>{}</div>", res);
+                    
+                    if intent.has_bibliography.unwrap_or(false) {
+                         let bib_output = processor.process_references();
+                         if !bib_output.bibliography.is_empty() {
+                             html.push_str("<div class='preview-bibliography'><h4>Example Bibliography</h4>");
+                             for entry in bib_output.bibliography {
+                                 let bib_str = csln_processor::citation_to_string(&entry, None, None, None, None);
+                                 html.push_str(&format!("<div class='bib-entry'>{}</div>", bib_str));
+                             }
+                             html.push_str("</div>");
+                         }
+                    }
+                    
+                    html.push_str("</div>");
+                    package.preview_html = html;
+                }
+            },
+            Err(e) => {
+                println!("Preview generation error: {}", e);
+                // Fallback to the hardcoded preview if generation fails (or show error)
+            }
+        }
+    }
+
     Json(package)
 }
 

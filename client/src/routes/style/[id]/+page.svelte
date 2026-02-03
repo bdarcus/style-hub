@@ -86,7 +86,7 @@
 
     onMount(async () => {
         try {
-            const res = await fetch('http://localhost:3000/references');
+            const res = await fetch('/references');
             const data = await res.json();
             // Convert map to array
             references = Object.entries(data).map(([id, ref]: [string, any]) => ({ ...ref, id }));
@@ -141,7 +141,7 @@
             if (previews[ref.id]) continue; // Already cached? (Maybe clear on style change)
 
             // Citation
-            fetch('http://localhost:3000/preview/citation', {
+            fetch('/preview/citation', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ style: styleDef, references: [ref] })
@@ -152,7 +152,7 @@
             });
 
             // Bibliography
-            fetch('http://localhost:3000/preview/bibliography', {
+            fetch('/preview/bibliography', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ style: styleDef, references: [ref] })

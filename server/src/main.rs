@@ -82,7 +82,7 @@ async fn preview_citation(Json(payload): Json<PreviewRequest>) -> Json<PreviewRe
     // 1. Convert Vec<Reference> to Bibliography (IndexMap)
     let bib: Bibliography = payload.references
         .into_iter()
-        .map(|r| (r.id.clone(), r))
+        .map(|r| (r.id().clone().unwrap_or_default(), r))
         .collect();
 
     // 2. Identify IDs to cite (for now just cite them all)
@@ -110,7 +110,7 @@ async fn preview_citation(Json(payload): Json<PreviewRequest>) -> Json<PreviewRe
 async fn preview_bibliography(Json(payload): Json<PreviewRequest>) -> Json<PreviewResponse> {
     let bib: Bibliography = payload.references
         .into_iter()
-        .map(|r| (r.id.clone(), r))
+        .map(|r| (r.id().clone().unwrap_or_default(), r))
         .collect();
 
     let processor = Processor::new(payload.style, bib);

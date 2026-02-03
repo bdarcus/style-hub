@@ -135,28 +135,70 @@ impl StyleIntent {
         html
     }
 
-    /// Generates a complete CSLN YAML string based on the current intent.
-    pub fn generate_csln(&self) -> String {
-        // Construct the basic metadata for the new style
+    /// Converts the current intent into a `csln_core::Style` struct.
+    pub fn to_style(&self) -> csln_core::Style {
+         // Construct the basic metadata for the new style
         let mut style = csln_core::Style {
-            id: Some("custom-style".to_string()),
-            title: Some("Custom Style".to_string()),
-            version: Some("1.0".to_string()),
-            last_updated: Some("2024-02-03T00:00:00+00:00".to_string()),
+            info: csln_core::StyleInfo {
+                id: Some("custom-style".to_string()),
+                title: Some("Custom Style".to_string()),
+                ..Default::default()
+            },
             ..Default::default()
         };
 
-        // TODO: Map intent fields to csln_core::Style structure
-        // This is a placeholder that outputs a valid but minimal CSLN YAML.
-        // As csln_core evolves, we will map specific fields like 'class' and 'author_format'
-        // to the actual Context/Driver configuration in CSLN.
-        
-        // Example (conceptual mapping):
-        // if let Some(CitationClass::Numeric) = self.class {
-        //     style.citation.driver = Some(Driver::Numeric);
-        // }
+        let preset = match self.class {
+             Some(CitationClass::Numeric) => Some(csln_core::TemplatePreset::Vancouver),
+             Some(CitationClass::Note) => Some(csln_core::TemplatePreset::ChicagoAuthorDate), // Fallback/Placeholder
+             Some(CitationClass::InText) => Some(csln_core::TemplatePreset::Apa),
+             None => None,
+        };
 
+        if let Some(p) = preset {
+             style.citation = Some(csln_core::CitationSpec {
+                 use_preset: Some(p.clone()),
+                 ..Default::default()
+             });
+             
+             // If bibliography is requested, add it too (using same preset usually works for matching styles)
+             if self.has_bibliography.unwrap_or(false) {
+                 style.bibliography = Some(csln_core::BibliographySpec {
+                     use_preset: Some(p),
+                     ..Default::default()
+                 });
+             }
+        }
+
+        style
+    }
+
+    /// Generates a complete CSLN YAML string based on the current intent.
+    pub fn generate_csln(&self) -> String {
+        let style = self.to_style();
         serde_yaml::to_string(&style).unwrap_or_else(|_| "# Error generating CSLN".to_string())
+    }
+
+}
+
+#[cfg(test)]
+mod intent_tests {
+    use super::*;
+
+    #[test]
+    fn test_render_preview_initial() {
+        let intent = StyleIntent::default();
+        let html = intent.render_preview();
+        assert!(html.contains("[Select Citation Class]"));
+    }
+
+    #[test]
+    fn test_to_style_numeric() {
+        let mut intent = StyleIntent::default();
+        intent.class = Some(CitationClass::Numeric);
+        let style = intent.to_style();
+        assert!(style.citation.is_some());
+        let spec = style.citation.unwrap();
+        assert_eq!(spec.use_preset, Some(csln_core::TemplatePreset::Vancouver));
     }
 }
 

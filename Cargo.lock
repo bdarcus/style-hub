@@ -94,7 +94,20 @@ checksum = "a35a7317fcbdbef94b60d0dd0a658711a936accfce4a631fea4bf8e527eff3c2"
 dependencies = [
  "numerals",
  "paste",
- "strum",
+ "strum 0.26.3",
+ "unicode-normalization",
+ "unscanny",
+]
+
+[[package]]
+name = "biblatex"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53d0c374feba1b9a59042a7c1cf00ce7c34b977b9134fe7c42b08e5183729f66"
+dependencies = [
+ "paste",
+ "roman-numerals-rs",
+ "strum 0.27.2",
  "unicode-normalization",
  "unscanny",
 ]
@@ -107,9 +120,9 @@ checksum = "812e12b5285cc515a9c72a5c1d3b6d46a19dac5acfef5265968c166106e31dd3"
 
 [[package]]
 name = "bytes"
-version = "1.11.0"
+version = "1.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b35204fbdc0b3f4446b89fc1ac2cf84a8a68971995d0bf2e925ec7cd960f9cb3"
+checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
 name = "cfg-if"
@@ -129,7 +142,7 @@ dependencies = [
 [[package]]
 name = "csl_legacy"
 version = "0.1.0"
-source = "git+https://github.com/bdarcus/csl26?branch=main#d334bce74b9fa9803c278fd620eefc8cea3b1e19"
+source = "git+https://github.com/bdarcus/csl26?branch=main#71152b5a4fe972e88877eb808071b1bfce9dd180"
 dependencies = [
  "indexmap",
  "roxmltree",
@@ -140,8 +153,10 @@ dependencies = [
 [[package]]
 name = "csln_core"
 version = "0.1.0"
-source = "git+https://github.com/bdarcus/csl26?branch=main#d334bce74b9fa9803c278fd620eefc8cea3b1e19"
+source = "git+https://github.com/bdarcus/csl26?branch=main#71152b5a4fe972e88877eb808071b1bfce9dd180"
 dependencies = [
+ "biblatex 0.11.0",
+ "csl_legacy",
  "edtf",
  "schemars",
  "serde",
@@ -153,9 +168,9 @@ dependencies = [
 [[package]]
 name = "csln_processor"
 version = "0.1.0"
-source = "git+https://github.com/bdarcus/csl26?branch=main#d334bce74b9fa9803c278fd620eefc8cea3b1e19"
+source = "git+https://github.com/bdarcus/csl26?branch=main#71152b5a4fe972e88877eb808071b1bfce9dd180"
 dependencies = [
- "biblatex",
+ "biblatex 0.10.0",
  "csl_legacy",
  "csln_core",
  "edtf",
@@ -721,6 +736,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "roman-numerals-rs"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c85cd47a33a4510b1424fe796498e174c6a9cf94e606460ef022a19f3e4ff85e"
+
+[[package]]
 name = "roxmltree"
 version = "0.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -937,7 +958,16 @@ version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
- "strum_macros",
+ "strum_macros 0.26.4",
+]
+
+[[package]]
+name = "strum"
+version = "0.27.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af23d6f6c1a224baef9d3f61e287d2761385a5b88fdab4eb4c6f11aeb54c4bcf"
+dependencies = [
+ "strum_macros 0.27.2",
 ]
 
 [[package]]
@@ -954,6 +984,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "strum_macros"
+version = "0.27.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7695ce3845ea4b33927c055a39dc438a45b059f7c1b3d91d38d10355fb8cbca7"
+dependencies = [
+ "heck",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+]
+
+[[package]]
 name = "style-editor-api"
 version = "0.1.0"
 dependencies = [
@@ -964,6 +1006,7 @@ dependencies = [
  "intent-engine",
  "serde",
  "serde_json",
+ "serde_yaml",
  "tokio",
  "tower-http",
  "tracing",
