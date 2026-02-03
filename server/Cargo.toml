@@ -17,3 +17,4 @@ indexmap = "2"
 # Core CSL logic
 csln_core = { git = "https://github.com/bdarcus/csl26", branch = "main" }
 csln_processor = { git = "https://github.com/bdarcus/csl26", branch = "main" }
+serde_yaml = "0.9.34"

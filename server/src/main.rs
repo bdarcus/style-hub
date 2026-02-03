@@ -1,23 +1,49 @@
 use axum::{
+    extract::State,
     routing::{get, post},
     Router,
     Json,
 };
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::collections::HashMap;
 use serde_json::{Value, json};
 use csln_core::Style;
 use csln_processor::{Processor, Reference, Bibliography, Citation, CitationItem};
 use serde::{Deserialize, Serialize};
 
+struct AppState {
+    references: HashMap<String, Reference>,
+}
+
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
 
+    // Load references from YAML
+    let ref_path = "resources/comprehensive.yaml";
+    // Try explicit path if running from root
+    let ref_path = if std::path::Path::new("server/resources/comprehensive.yaml").exists() {
+        "server/resources/comprehensive.yaml"
+    } else {
+        ref_path
+    };
+
+    let f = std::fs::File::open(ref_path).expect("Failed to open comprehensive.yaml references");
+    let references: HashMap<String, Reference> = serde_yaml::from_reader(f).expect("Failed to parse comprehensive.yaml");
+
+    let state = Arc::new(AppState {
+        references
+    });
+
     let app = Router::new()
         .route("/", get(health_check))
         .route("/version", get(version))
+        .route("/references", get(get_references))
         .route("/preview/citation", post(preview_citation))
-        .route("/preview/bibliography", post(preview_bibliography));
+        .route("/preview/bibliography", post(preview_bibliography))
+        .with_state(state)
+        .layer(tower_http::cors::CorsLayer::permissive());
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
     println!("listening on {}", addr);
@@ -35,6 +61,10 @@ async fn version() -> Json<Value> {
         "service": "style-editor-server",
         "csln_core_version": "git-latest"
     }))
+}
+
+async fn get_references(State(state): State<Arc<AppState>>) -> Json<HashMap<String, Reference>> {
+    Json(state.references.clone())
 }
 
 #[derive(Deserialize)]
