@@ -59,7 +59,7 @@ impl StyleIntent {
                     Preview {
                         label: "Parenthetical (Author-Date)".to_string(),
                         html: "<div class='preview'>(Doe 2023)</div>".to_string(),
-                        choice_value: serde_json::json!({ "class": "in-text" }),
+                        choice_value: serde_json::json!({ "class": "in_text" }),
                     },
                     Preview {
                         label: "Numeric (Vancouver)".to_string(),
@@ -76,7 +76,7 @@ impl StyleIntent {
         } else if self.author_format.is_none() {
             (
                 Some(Question {
-                    id: "author-format".to_string(),
+                    id: "author_format".to_string(),
                     text: "How should multiple authors be displayed?".to_string(),
                     description: Some("Choose how you want to handle author lists in citations.".to_string()),
                 }),
@@ -85,14 +85,14 @@ impl StyleIntent {
                         label: "Full List".to_string(),
                         html: "<div class='preview'>(Doe, Smith, & Jones, 2023)</div>".to_string(),
                         choice_value: serde_json::json!({ 
-                            "author-format": { "form": "long", "et_al": null } 
+                            "author_format": { "form": "long", "et_al": null } 
                         }),
                     },
                     Preview {
                         label: "Abbreviated (Et Al. after 3)".to_string(),
                         html: "<div class='preview'>(Doe et al., 2023)</div>".to_string(),
                         choice_value: serde_json::json!({ 
-                            "author-format": { "form": "long", "et_al": { "min": 3, "use-first": 1 } } 
+                            "author_format": { "form": "long", "et_al": { "min": 3, "use_first": 1 } } 
                         }),
                     },
                 ]
@@ -100,7 +100,7 @@ impl StyleIntent {
         } else if self.has_bibliography.is_none() {
             (
                 Some(Question {
-                    id: "has-bibliography".to_string(),
+                    id: "has_bibliography".to_string(),
                     text: "Do you need a bibliography at the end?".to_string(),
                     description: Some("Most academic styles require a list of references at the end of the document.".to_string()),
                 }),
@@ -108,12 +108,12 @@ impl StyleIntent {
                     Preview {
                         label: "Yes, include bibliography".to_string(),
                         html: "<div class='preview'><b>Bibliography</b><br/>Doe, J. (2023). Title...</div>".to_string(),
-                        choice_value: serde_json::json!({ "has-bibliography": true }),
+                        choice_value: serde_json::json!({ "has_bibliography": true }),
                     },
                     Preview {
                         label: "No bibliography".to_string(),
                         html: "<div class='preview'><i>Just the citations.</i></div>".to_string(),
-                        choice_value: serde_json::json!({ "has-bibliography": false }),
+                        choice_value: serde_json::json!({ "has_bibliography": false }),
                     },
                 ]
             )

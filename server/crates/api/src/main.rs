@@ -179,7 +179,7 @@ async fn decide_handler(
     let mut cite_ids = Vec::new();
     
     // Prioritize specific references that show off style features
-    let candidates = ["vaswani_attention", "foucault_discipline", "aad_atlas_higgs", "brown_v_board"];
+    let candidates = ["vaswani_attention", "foucault_discipline", "brown_v_board"];
     for id in candidates {
         if bib.contains_key(id) {
             cite_ids.push(id.to_string());

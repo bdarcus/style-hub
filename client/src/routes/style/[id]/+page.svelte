@@ -103,8 +103,8 @@
             return {
                 version: "",
                 info: { title: 'APA' },
-                citation: { "use_preset": "apa" },
-                bibliography: { "use_preset": "apa" }
+                citation: { "use-preset": "apa" },
+                bibliography: { "use-preset": "apa" }
             };
         }
         if (id === 'nature') {
@@ -113,24 +113,24 @@
             return {
                 version: "",
                 info: { title: 'Nature' },
-                citation: { "use_preset": "ieee" },
-                bibliography: { "use_preset": "ieee" }
+                citation: { "use-preset": "ieee" },
+                bibliography: { "use-preset": "ieee" }
             };
         }
         if (id === 'chicago') {
             return {
                 version: "",
                 info: { title: 'Chicago' },
-                citation: { "use_preset": "chicago-author-date" },
-                bibliography: { "use_preset": "chicago-author-date" }
+                citation: { "use-preset": "chicago-author-date" },
+                bibliography: { "use-preset": "chicago-author-date" }
             };
         }
         // Default fallthrough
         return {
             version: "",
             info: { title: 'Unknown' },
-            citation: { "use_preset": "apa" },
-            bibliography: { "use_preset": "apa" }
+            citation: { "use-preset": "apa" },
+            bibliography: { "use-preset": "apa" }
         };
     }
 

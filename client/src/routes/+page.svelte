@@ -40,10 +40,10 @@
     );
 
     function getStyleDefinition(id: string) {
-        if (id === 'apa') return { version: "", info: { title: 'APA' }, citation: { "use_preset": "apa" }, bibliography: { "use_preset": "apa" } };
-        if (id === 'nature') return { version: "", info: { title: 'Nature' }, citation: { "use_preset": "ieee" }, bibliography: { "use_preset": "ieee" } };
-        if (id === 'chicago') return { version: "", info: { title: 'Chicago' }, citation: { "use_preset": "chicago-author-date" }, bibliography: { "use_preset": "chicago-author-date" } };
-        return { version: "", info: { title: 'Unknown' }, citation: { "use_preset": "apa" }, bibliography: { "use_preset": "apa" } };
+        if (id === 'apa') return { version: "", info: { title: 'APA' }, citation: { "use-preset": "apa" }, bibliography: { "use-preset": "apa" } };
+        if (id === 'nature') return { version: "", info: { title: 'Nature' }, citation: { "use-preset": "ieee" }, bibliography: { "use-preset": "ieee" } };
+        if (id === 'chicago') return { version: "", info: { title: 'Chicago' }, citation: { "use-preset": "chicago-author-date" }, bibliography: { "use-preset": "chicago-author-date" } };
+        return { version: "", info: { title: 'Unknown' }, citation: { "use-preset": "apa" }, bibliography: { "use-preset": "apa" } };
     }
 
     onMount(async () => {
