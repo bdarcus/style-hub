@@ -135,58 +135,28 @@ impl StyleIntent {
         html
     }
 
-    /// Generates a complete CSL XML string based on the current intent.
-    pub fn generate_csl(&self) -> String {
-        let class_attr = match self.class {
-            Some(CitationClass::Note) => "note",
-            _ => "in-text",
+    /// Generates a complete CSLN YAML string based on the current intent.
+    pub fn generate_csln(&self) -> String {
+        // Construct the basic metadata for the new style
+        let mut style = csln_core::Style {
+            id: Some("custom-style".to_string()),
+            title: Some("Custom Style".to_string()),
+            version: Some("1.0".to_string()),
+            last_updated: Some("2024-02-03T00:00:00+00:00".to_string()),
+            ..Default::default()
         };
 
-        let mut xml = String::new();
-        xml.push_str("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
-        xml.push_str("<style xmlns=\"http://purl.org/net/xbiblio/csl\" version=\"1.0\" ");
-        xml.push_str(&format!("class=\"{}\">\n", class_attr));
-        xml.push_str("  <info>\n");
-        xml.push_str("    <title>Custom Style</title>\n");
-        xml.push_str("    <id>http://www.zotero.org/styles/custom-style</id>\n");
-        xml.push_str("    <updated>2024-02-03T00:00:00+00:00</updated>\n");
-        xml.push_str("  </info>\n");
+        // TODO: Map intent fields to csln_core::Style structure
+        // This is a placeholder that outputs a valid but minimal CSLN YAML.
+        // As csln_core evolves, we will map specific fields like 'class' and 'author_format'
+        // to the actual Context/Driver configuration in CSLN.
         
-        // Citation
-        xml.push_str("  <citation>\n");
-        xml.push_str("    <layout>\n");
-        match self.class {
-            Some(CitationClass::Numeric) => {
-                xml.push_str("      <text variable=\"citation-number\" prefix=\"[\" suffix=\"]\"/>\n");
-            }
-            Some(CitationClass::Note) => {
-                xml.push_str("      <text variable=\"title\"/>\n");
-            }
-            _ => {
-                xml.push_str("      <group delimiter=\", \">\n");
-                xml.push_str("        <names variable=\"author\">\n");
-                xml.push_str("          <name form=\"short\"/>\n");
-                xml.push_str("        </names>\n");
-                xml.push_str("        <date variable=\"issued\" form=\"numeric\" date-parts=\"year\"/>\n");
-                xml.push_str("      </group>\n");
-            }
-        }
-        xml.push_str("    </layout>\n");
-        xml.push_str("  </citation>\n");
+        // Example (conceptual mapping):
+        // if let Some(CitationClass::Numeric) = self.class {
+        //     style.citation.driver = Some(Driver::Numeric);
+        // }
 
-        // Bibliography
-        if self.has_bibliography.unwrap_or(false) {
-            xml.push_str("  <bibliography>\n");
-            xml.push_str("    <layout>\n");
-            xml.push_str("      <names variable=\"author\" suffix=\". \"/>\n");
-            xml.push_str("      <date variable=\"issued\" suffix=\". \"/>\n");
-            xml.push_str("      <text variable=\"title\" font-style=\"italic\"/>\n");
-            xml.push_str("    </layout>\n");
-            xml.push_str("  </bibliography>\n");
-        }
-
-        xml.push_str("</style>");
-        xml
+        serde_yaml::to_string(&style).unwrap_or_else(|_| "# Error generating CSLN".to_string())
     }
 }
 

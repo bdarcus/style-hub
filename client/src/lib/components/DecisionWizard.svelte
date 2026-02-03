@@ -46,7 +46,7 @@
         fetchDecision($intent);
     }
 
-    async function downloadCSL() {
+    async function downloadCSLN() {
         try {
             const res = await fetch('/api/v1/generate', {
                 method: 'POST',
@@ -58,12 +58,12 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'custom-style.csl';
+                a.download = 'custom-style.yaml';
                 document.body.appendChild(a);
                 a.click();
                 a.remove();
             } else {
-                alert('Failed to generate CSL');
+                alert('Failed to generate CSLN');
             }
         } catch (e) {
             alert('Error: ' + String(e));
@@ -128,8 +128,8 @@
                     Your citation style has been configured. You can now download the CSL file or use it in your editor.
                 </p>
             </div>
-            <button onclick={downloadCSL} class="w-full py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
-                Download CSL Style
+            <button onclick={downloadCSLN} class="w-full py-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">
+                Download CSLN Style
             </button>
             <button onclick={doReset} class="w-full py-3 text-slate-500 text-sm font-bold hover:text-slate-900 transition-colors">
                 Start Over

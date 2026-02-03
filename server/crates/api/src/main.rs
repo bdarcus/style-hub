@@ -115,19 +115,19 @@ async fn decide_handler(Json(intent): Json<StyleIntent>) -> Json<DecisionPackage
 
 /// Handler for the `/api/v1/generate` endpoint.
 /// 
-/// Receives the final `StyleIntent` and returns the complete CSL XML.
+/// Receives the final `StyleIntent` and returns the complete CSLN YAML.
 async fn generate_handler(Json(intent): Json<StyleIntent>) -> (axum::http::HeaderMap, String) {
-    let csl = intent.generate_csl();
+    let csln = intent.generate_csln();
     
     let mut headers = axum::http::HeaderMap::new();
     headers.insert(
         axum::http::header::CONTENT_TYPE,
-        axum::http::HeaderValue::from_static("application/xml"),
+        axum::http::HeaderValue::from_static("application/x-yaml"),
     );
     headers.insert(
         axum::http::header::CONTENT_DISPOSITION,
-        axum::http::HeaderValue::from_static("attachment; filename=\"custom-style.csl\""),
+        axum::http::HeaderValue::from_static("attachment; filename=\"custom-style.yaml\""),
     );
 
-    (headers, csl)
+    (headers, csln)
 }
