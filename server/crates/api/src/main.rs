@@ -200,11 +200,17 @@ async fn decide_handler(
     
     // Fallback to random ones if none found
     if cite_ids.is_empty() {
-        cite_ids = bib.keys().take(3).cloned().collect();
+        cite_ids = state.references.keys().take(3).cloned().collect();
     }
 
     // Only run processor if a class is selected to avoid panics on empty style
     if intent.class.is_some() && !cite_ids.is_empty() {
+        // Create a small bibliography containing only the cited references
+        let bib: Bibliography = state.references.iter()
+            .filter(|(k, _)| cite_ids.contains(k))
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+
         let processor = Processor::new(style, bib);
         let citation = Citation {
             id: Some("preview-1".to_string()),

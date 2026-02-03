@@ -113,7 +113,7 @@
             return {
                 version: "",
                 info: { title: 'Nature' },
-                citation: { "use-preset": "ieee", "wrap": "brackets" },
+                citation: { "use-preset": "ieee" },
                 bibliography: { "use-preset": "ieee" }
             };
         }

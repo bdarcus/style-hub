@@ -189,7 +189,6 @@ impl StyleIntent {
         if let Some(p) = preset {
              let wrap = match self.class {
                  Some(CitationClass::InText) => Some(csln_core::template::WrapPunctuation::Parentheses),
-                 Some(CitationClass::Numeric) => Some(csln_core::template::WrapPunctuation::Brackets),
                  _ => None,
              };
 
@@ -253,7 +252,7 @@ mod intent_tests {
         assert!(style.citation.is_some());
         let spec = style.citation.unwrap();
         assert_eq!(spec.use_preset, Some(csln_core::TemplatePreset::Vancouver));
-        assert_eq!(spec.wrap, Some(csln_core::template::WrapPunctuation::Brackets));
+        assert_eq!(spec.wrap, None);
     }
 
     #[test]
