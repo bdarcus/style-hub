@@ -3,9 +3,17 @@
     import { intent } from '$lib/stores/intent';
     import { goto } from '$app/navigation';
     import { bookmarks, toggleBookmark } from '$lib/stores/bookmarks';
+    import { onMount } from 'svelte';
 
-    // Mock data for the demonstration
-    // In a real app, this would be fetched from the backend or a style provider
+    // State
+    let references = $state<any[]>([]);
+    let previews = $state<Record<string, { citation: string, bibliography: string }>>({});
+    let selectedCategory = $state('All');
+    let loadingReferences = $state(true);
+
+    const categories = ['All', 'Humanities', 'Social Sciences', 'Hard Sciences', 'Law', 'Edge Cases'];
+
+    // Mock data for style metadata (still needed for header info)
     const stylesInfo: Record<string, any> = {
         'apa': {
             name: 'APA 7th Edition',
@@ -42,10 +50,171 @@
     let styleId = $derived($page.params.id);
     let style = $derived(stylesInfo[styleId] || stylesInfo['apa']);
 
+    let filteredReferences = $derived(
+        selectedCategory === 'All' 
+            ? references 
+            : references.filter(ref => {
+                const slug = selectedCategory.toLowerCase().replace(' ', '-');
+                const kw = ref.keywords || [];
+                // Special mapping for 'edge cases' -> 'edge-case'? yaml has 'edge-case' or 'edge-cases'? 
+                // In file: "Edge Cases" section comment, but keywords? 
+                // who_report: [medicine, global-health]. 
+                // economist_editorial: [news, anonymous]. 
+                // Actually the keywords in yaml for who_report are NOT 'edge-cases'.
+                // Ideally backend categorization should be robust.
+                // For now, let's just check if ANY keyword matches.
+                // Or looking at file:
+                // foucault: [humanities...]
+                // berger_luckmann: [social-sciences...]
+                // einstein: [hard-sciences...]
+                // brown_v_board: [law]
+                // who_report: [medicine...] -> Maybe map to Edge Cases manually or simply stick to the 3 main ones + law?
+                
+                if (slug === 'edge-cases') {
+                     // Catch-all for things that don't match others?
+                     return !kw.some((k: string) => ['humanities', 'social-sciences', 'hard-sciences', 'law'].includes(k));
+                }
+                
+                return kw.includes(slug);
+            })
+    );
+
     function handleFork() {
-        // Pre-fill the intent and go to wizard
         intent.update(i => ({ ...i, base_archetype: styleId }));
         goto('/create-wizard');
+    }
+
+    onMount(async () => {
+        try {
+            const res = await fetch('http://localhost:3000/references');
+            const data = await res.json();
+            // Convert map to array
+            references = Object.entries(data).map(([id, ref]: [string, any]) => ({ ...ref, id }));
+        } catch (e) {
+            console.error("Failed to fetch references:", e);
+        } finally {
+            loadingReferences = false;
+        }
+    });
+
+    function getStyleDefinition(id: string) {
+        // Minimal CSLN definitions for previews
+        if (id === 'apa') {
+            return {
+                info: { title: 'APA' },
+                citation: { "use-preset": "apa" },
+                bibliography: { "use-preset": "apa" }
+            };
+        }
+        if (id === 'nature') {
+            // Nature is numeric. Using IEEE as proxy for now as CSLN core might not have Nature specific preset yet.
+            // Or maybe it does? The user code for csln_core had Ieee, Vancouver.
+            return {
+                info: { title: 'Nature' },
+                citation: { "use-preset": "ieee" },
+                bibliography: { "use-preset": "ieee" }
+            };
+        }
+        if (id === 'chicago') {
+            return {
+                info: { title: 'Chicago' },
+                citation: { "use-preset": "chicago-author-date" },
+                bibliography: { "use-preset": "chicago-author-date" }
+            };
+        }
+        // Default fallthrough
+        return {
+            info: { title: 'Unknown' },
+            citation: { "use-preset": "apa" },
+            bibliography: { "use-preset": "apa" }
+        };
+    }
+
+    async function updatePreviews(refs: any[], sId: string) {
+        if (!refs.length) return;
+
+        const styleDef = getStyleDefinition(sId);
+
+        // Fetch previews one by one to avoid large payload block 
+        // (or can do parallel)
+        for (const ref of refs) {
+            if (previews[ref.id]) continue; // Already cached? (Maybe clear on style change)
+
+            // Citation
+            fetch('http://localhost:3000/preview/citation', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ style: styleDef, references: [ref] })
+            })
+            .then(r => r.json())
+            .then(data => {
+                previews[ref.id] = { ...previews[ref.id], citation: data.result };
+            });
+
+            // Bibliography
+            fetch('http://localhost:3000/preview/bibliography', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ style: styleDef, references: [ref] })
+            })
+            .then(r => r.json())
+            .then(data => {
+                previews[ref.id] = { ...previews[ref.id], bibliography: data.result };
+            });
+        }
+    }
+
+    $effect(() => {
+        // Clear previews when style changes
+        // previews = {}; // Actually don't clear all, just maybe re-fetch?
+        // If style ID changes, we need to re-fetch EVERYTHING.
+        // But if filtering changes, we just need to fetch visible ones.
+        
+        // Simple strategy: Clear previews if styleId changes distinct from previous (tracking logic needed or just trust reactivity)
+        // Since we don't strictly track prev styleId easily in effect without extra var, 
+        // we'll just re-request. The browser cache might help, or we brute force it.
+        // Let's reset previews when styleId changes. 
+        // But $effect runs on any dep change. 
+        // If we clear previews here, we might loop if previews is a dep?
+        // references and styleId are deps explicitly or implicitly.
+        
+        // We pass visible filtered references
+        if(filteredReferences.length > 0) {
+             // We need to know if the STYLE changed to invalidate current previews.
+             // For now, let's just make the request. 
+             // We'll modify updatePreviews to force update?
+             // Actually, the key is the styleId.
+             // Let's clear previews inside updatePreviews if necessary? No.
+             
+             // Just call:
+             updatePreviews(filteredReferences, styleId);
+        }
+    });
+    
+    // Watch styleId separately to clear cache?
+    let lastStyleId = $state(styleId);
+    $effect(() => {
+        if (styleId !== lastStyleId) {
+            previews = {};
+            lastStyleId = styleId;
+        }
+    });
+
+    function getTitle(ref: any) {
+        if (typeof ref.title === 'string') return ref.title;
+        if (ref.title?.main) return ref.title.main;
+        return "Untitled";
+    }
+
+    function getColorForType(type: string) {
+        switch (type) {
+            case 'article-journal': return 'bg-emerald-500';
+            case 'book': return 'bg-orange-500';
+            case 'chapter': return 'bg-blue-500';
+            case 'report': return 'bg-purple-500';
+            case 'webpage': return 'bg-pink-500';
+            default: return 'bg-slate-500';
+        }
     }
 </script>
 
@@ -154,139 +323,79 @@
                 </div>
             </aside>
 
-            <!-- Previews / Stress Tests -->
-            <section class="lg:col-span-8 space-y-8">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-2xl font-black text-slate-950 tracking-tight">Citation stress tests</h2>
-                    <div class="flex gap-2">
-                        <button class="px-4 py-2 rounded-lg bg-slate-200 text-slate-900 text-xs font-bold">All Tests</button>
-                        <button class="px-4 py-2 rounded-lg bg-white border border-slate-100 text-slate-500 text-xs font-bold hover:bg-slate-50">Books</button>
-                    </div>
+    <section class="lg:col-span-8 space-y-8">
+        <div class="flex flex-col gap-6 mb-4">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-black text-slate-950 tracking-tight">Citation stress tests</h2>
+                <div class="text-sm text-slate-500 font-bold">
+                    {filteredReferences.length} tests
                 </div>
+            </div>
 
-                <!-- Test Card 1 -->
+            <!-- Category Filters -->
+            <div class="flex flex-wrap gap-2">
+                {#each categories as category}
+                    <button 
+                        class="px-4 py-2 rounded-lg text-xs font-bold transition-all {selectedCategory === category ? 'bg-slate-900 text-white shadow-lg shadow-slate-200' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'}"
+                        onclick={() => selectedCategory = category}
+                    >
+                        {category}
+                    </button>
+                {/each}
+            </div>
+        </div>
+
+        {#if loadingReferences}
+            <div class="py-20 text-center">
+                <div class="inline-block w-8 h-8 border-4 border-slate-200 border-t-primary rounded-full animate-spin mb-4"></div>
+                <p class="text-slate-500 font-medium">Loading test cases...</p>
+            </div>
+        {:else if filteredReferences.length === 0}
+             <div class="py-20 text-center bg-slate-50 rounded-3xl border border-slate-100">
+                <span class="material-symbols-outlined text-4xl text-slate-300 mb-3">category</span>
+                <p class="text-slate-500 font-medium">No examples found for {selectedCategory}</p>
+            </div>
+        {:else}
+            {#each filteredReferences as ref (ref.id)}
                 <article class="rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                     <div class="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                         <div class="flex items-center gap-3">
-                            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                            <h3 class="font-bold text-slate-900">Standard Journal Article</h3>
+                            <div class="w-2 h-2 rounded-full {getColorForType(ref.type)}"></div>
+                            <h3 class="font-bold text-slate-900 truncate max-w-[300px]" title={getTitle(ref)}>{getTitle(ref)}</h3>
                         </div>
-                        <span class="text-[10px] font-mono text-slate-400">article-journal</span>
+                        <span class="text-[10px] font-mono text-slate-400 bg-white px-2 py-1 rounded border border-slate-100">{ref.type}</span>
                     </div>
                     <div class="p-8 space-y-8">
                         <div>
                             <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">In-Text Citation</p>
-                            <div class="p-6 rounded-2xl bg-slate-50 font-serif text-lg leading-relaxed text-slate-800 border border-slate-100">
-                                <span class="text-slate-300">...as demonstrated in </span>
-                                <span class="bg-blue-600/10 text-primary px-1 rounded mx-0.5 border-b border-primary/20">
-                                    {#if styleId === 'apa'}
-                                        (Doe et al. 2024)
-                                    {:else if styleId === 'nature'}
-                                        <sup>1</sup>
-                                    {:else}
-                                        Doe (2024)
-                                    {/if}
-                                </span>
-                                <span class="text-slate-300">, the discovery confirmed...</span>
+                            <div class="p-6 rounded-2xl bg-slate-50 font-serif text-lg leading-relaxed text-slate-800 border border-slate-100 min-h-[80px] flex items-center">
+                                {#if previews[ref.id]?.citation}
+                                    <span class="bg-blue-600/10 text-primary px-1 rounded mx-0.5 border-b border-primary/20">
+                                        {@html previews[ref.id].citation}
+                                    </span>
+                                {:else}
+                                    <span class="text-slate-400 text-sm animate-pulse">Generating preview...</span>
+                                {/if}
                             </div>
                         </div>
                         <div>
                             <div class="flex items-center justify-between mb-4">
                                 <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Bibliography Entry</p>
-                                <button class="text-xs font-bold text-primary hover:text-blue-700 flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-sm">content_copy</span> Copy
-                                </button>
                             </div>
-                            <div class="p-6 rounded-2xl bg-slate-50 font-serif text-lg leading-relaxed text-slate-800 border border-slate-100">
-                                {#if styleId === 'apa'}
-                                    Doe, J., Smith, R., & Jones, A. (2024). <i>The Future of Citation.</i> Academic Press. https://doi.org/10.1000/182
-                                {:else if styleId === 'nature'}
-                                    1. Doe, J., Smith, R. & Jones, A. The Future of Citation. <i>Academic Press</i> (2024).
+                            <div class="p-6 rounded-2xl bg-slate-50 font-serif text-lg leading-relaxed text-slate-800 border border-slate-100 min-h-[80px] flex items-center">
+                                {#if previews[ref.id]?.bibliography}
+                                    <div class="w-full">
+                                        {@html previews[ref.id].bibliography}
+                                    </div>
                                 {:else}
-                                    Doe, J., Smith, R., and Jones, A. 2024. <i>The Future of Citation.</i> New York: Academic Press.
+                                    <span class="text-slate-400 text-sm animate-pulse">Generating preview...</span>
                                 {/if}
                             </div>
                         </div>
                     </div>
                 </article>
-
-                <!-- Test Card 2: Book -->
-                <article class="rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    <div class="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-2 h-2 rounded-full bg-orange-500"></div>
-                            <h3 class="font-bold text-slate-900">Standard Book</h3>
-                        </div>
-                        <span class="text-[10px] font-mono text-slate-400">book</span>
-                    </div>
-                    <div class="p-8 space-y-8">
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">In-Text Citation</p>
-                            <div class="p-6 rounded-2xl bg-slate-50 font-serif text-lg leading-relaxed text-slate-800 border border-slate-100">
-                                <span class="bg-blue-600/10 text-primary px-1 rounded mx-0.5 border-b border-primary/20">
-                                    {#if styleId === 'apa'}
-                                        (Foucault, 1977)
-                                    {:else if styleId === 'nature'}
-                                        <sup>2</sup>
-                                    {:else}
-                                        Foucault (1977)
-                                    {/if}
-                                </span>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Bibliography Entry</p>
-                            <div class="p-6 rounded-2xl bg-slate-50 font-serif text-lg leading-relaxed text-slate-800 border border-slate-100">
-                                {#if styleId === 'apa'}
-                                    Foucault, M. (1977). <i>Discipline and Punish: The Birth of the Prison</i>. Pantheon Books.
-                                {:else if styleId === 'nature'}
-                                    2. Foucault, M. <i>Discipline and Punish: The Birth of the Prison</i>. (Pantheon Books, 1977).
-                                {:else}
-                                    Foucault, Michel. 1977. <i>Discipline and Punish: The Birth of the Prison</i>. New York: Pantheon Books.
-                                {/if}
-                            </div>
-                        </div>
-                    </div>
-                </article>
-
-                <!-- Test Card 3: Chapter -->
-                <article class="rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    <div class="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-2 h-2 rounded-full bg-blue-500"></div>
-                            <h3 class="font-bold text-slate-900">Chapter in Edited Book</h3>
-                        </div>
-                        <span class="text-[10px] font-mono text-slate-400">chapter</span>
-                    </div>
-                    <div class="p-8 space-y-8">
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">In-Text Citation</p>
-                            <div class="p-6 rounded-2xl bg-slate-50 font-serif text-lg leading-relaxed text-slate-800 border border-slate-100">
-                                <span class="bg-blue-600/10 text-primary px-1 rounded mx-0.5 border-b border-primary/20">
-                                    {#if styleId === 'apa'}
-                                        (Gould, 1991)
-                                    {:else if styleId === 'nature'}
-                                        <sup>3</sup>
-                                    {:else}
-                                        Gould (1991)
-                                    {/if}
-                                </span>
-                            </div>
-                        </div>
-                        <div>
-                            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">Bibliography Entry</p>
-                            <div class="p-6 rounded-2xl bg-slate-50 font-serif text-lg leading-relaxed text-slate-800 border border-slate-100">
-                                {#if styleId === 'apa'}
-                                    Gould, G. (1991). Streisand as Schwarzkopf. In T. Page (Ed.), <i>The Glenn Gould Reader</i> (pp. 308–311). Vintage.
-                                {:else if styleId === 'nature'}
-                                    3. Gould, G. in <i>The Glenn Gould Reader</i> (ed. Page, T.) 308–311 (Vintage, 1991).
-                                {:else}
-                                    Gould, Glenn. 1991. “Streisand as Schwarzkopf.” In <i>The Glenn Gould Reader</i>, edited by Tim Page, 308–11. New York: Vintage.
-                                {/if}
-                            </div>
-                        </div>
-                    </div>
-                </article>
-            </section>
+            {/each}
+        {/if}
+    </section>
         </div>
 </main>

@@ -971,6 +971,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "style-editor-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "csln_core",
+ "csln_processor",
+ "indexmap",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tokio",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "syn"
 version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
