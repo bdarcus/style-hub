@@ -2,6 +2,8 @@
 
 A modern, intent-based editor for Citation Style Language (CSL) files.
 
+![Markdown Logo](resouces/img/main.png "Landing Page")
+
 ## Project Structure
 
 - `server/`: Rust backend using Axum and a custom intent-based decision engine.
