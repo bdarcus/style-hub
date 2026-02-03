@@ -1,85 +1,53 @@
-# Style Editor
+# CSL Style Editor
 
-A web-based style editor for finding, accessing, modifying and creating citation styles, designed to work in lockstep with the CSL Next ecosystem.
+A modern, intent-based editor for Citation Style Language (CSL) files.
 
 ## Project Structure
 
-- `server/`: Rust backend API server (using Axum) that interfaces with `csln_core` and `csln_processor`.
-- `client/`: React + Vite frontend application with Tailwind CSS v4.
+- `server/`: Rust backend using Axum and a custom intent-based decision engine.
+- `client/`: SvelteKit 5 frontend with Tailwind CSS 4.
 
-## Client (Frontend)
+## Features
 
-![Citation Style Editor Preview](client/public/screenshot.png)
+- **Style Discovery**: Find and browse existing citation styles from the CSL repository.
+- **Intent-Based Wizard**: Create new styles by answering simple questions about how you want your citations to look, rather than editing XML directly.
+- **Live Preview**: Real-time rendering of citations and bibliographies as you make decisions.
+- **CSL Export**: Download your finished style as a valid CSL XML file.
 
-The frontend is a modern React application designed for an intuitive, premium academic experience.
+## Design Philosophy
 
-### Features
-- **Style Hub**: Find and manage CSL styles.
-- **Visual Wizard**: Step-by-step creation of new styles with live document preview.
-- **Detailed Previews**: Comprehensive citation and bibliography verification.
-- **Design Tokens**: Powered by Tailwind CSS v4 for a sleek, responsive UI.
+The editor prioritizes **Visual Discovery**. Most users are looking to tweak an existing style. The Landing Page focuses on search and trending styles, with the **Creation Wizard** serving as a "Start from Scratch" option for advanced needs.
 
-### Running the Client
-Prerequisites: Node.js (v18+).
+The interface uses a clean, premium "Paper" aesthetic for previews, providing an academic context for the design decisions.
+
+## Development
+
+### Running the Project
+
+From the root directory:
 
 ```bash
-cd client
-npm install
+# Start both client and server concurrently
 npm run dev
 ```
-Proxying is configured to forward `/api` requests to the local Rust server.
 
-
-## Server
-
-The server provides API endpoints to preview citations and bibliographies using the CSL Next processor.
-
-### Running the Server
-
-Prerequisites: Rust toolchain.
+### Backend (Rust)
 
 ```bash
 cd server
 cargo run
 ```
 
-The server listens on `127.0.0.1:3000`.
-
-### API Endpoints
-
-#### `POST /preview/citation`
-
-Preview how a citation looks with a given style and references.
-
-**Input:** JSON object with `style` and `references`.
+### Frontend (SvelteKit)
 
 ```bash
-curl -H "Content-Type: application/json" \
-     -d @payload.json \
-     http://127.0.0.1:3000/preview/citation
+cd client
+npm install
+npm run dev
 ```
 
-#### `POST /preview/bibliography`
+## Technology Stack
 
-Preview the bibliography output.
-
-**Input:** JSON object with `style` and `references`.
-
-```bash
-curl -H "Content-Type: application/json" \
-     -d @payload.json \
-     http://127.0.0.1:3000/preview/bibliography
-```
-
-### Example Payload
-
-See [server/payload.json](server/payload.json) for a complete example of the input format.
-
-```json
-{
-  "style": { ... },
-  "references": [ ... ]
-}
-```
-
-Note: Currently, the API expects references in CSL-JSON format (legacy `Reference` type).
+- **Backend**: Rust, Axum, Serde, Specta (for TS bindings).
+- **Frontend**: Svelte 5, SvelteKit, Tailwind CSS 4, Lucide Svelte.
+- **Deployment**: Optimized for standard SvelteKit adapters (Vercel, Node, etc.).
