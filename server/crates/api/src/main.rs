@@ -158,9 +158,21 @@ async fn decide_handler(
         .map(|(k, v)| (k.clone(), v.clone()))
         .collect();
 
-    // Pick a few references to cite for the preview
-    // Ideally we pick diverse types (book, article, etc.)
-    let cite_ids: Vec<String> = bib.keys().take(3).cloned().collect();
+    // Pick a few diverse references to cite for the preview
+    let mut cite_ids = Vec::new();
+    
+    // Prioritize specific references that show off style features
+    let candidates = ["vaswani_attention", "foucault_discipline", "aad_atlas_higgs", "brown_v_board"];
+    for id in candidates {
+        if bib.contains_key(id) {
+            cite_ids.push(id.to_string());
+        }
+    }
+    
+    // Fallback to random ones if none found
+    if cite_ids.is_empty() {
+        cite_ids = bib.keys().take(3).cloned().collect();
+    }
 
     if !cite_ids.is_empty() {
         let processor = Processor::new(style, bib);
