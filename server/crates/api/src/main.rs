@@ -164,49 +164,36 @@ async fn preview_bibliography(Json(payload): Json<PreviewRequest>) -> Json<Previ
     Json(PreviewResponse { result })
 }
 
-/// Handler for the `/api/v1/decide` endpoint.
-/// 
-/// Receives the current `StyleIntent` from the frontend and determines:
-/// 1. What is missing?
-/// 2. What is the next logical question to ask?
-/// 3. What are the preview options for that question?
-async fn decide_handler(
-    State(state): State<Arc<AppState>>,
-    Json(intent): Json<StyleIntent>
-) -> Json<DecisionPackage> {
-    println!("Handling decide request: {:?}", intent);
-    // Call the engine to determine the next decision based on current intent
-    let mut package = intent.decide();
-
+/// Helper to generate preview HTML for a given intent and references
+fn generate_preview_html(intent: &StyleIntent, references: &HashMap<String, Reference>) -> Option<String> {
     // Generate real preview using the processor
     let style = intent.to_style();
     println!("Generated style: {:?}", style);
     
-    // Convert HashMap to Bibliography (IndexMap)
-    let bib: Bibliography = state.references.iter()
-        .map(|(k, v)| (k.clone(), v.clone()))
-        .collect();
-
     // Pick a few diverse references to cite for the preview
-    let mut cite_ids = Vec::new();
-    
     // Prioritize specific references that show off style features
     let candidates = ["vaswani_attention", "foucault_discipline", "brown_v_board"];
+    let mut cite_ids = Vec::new();
     for id in candidates {
-        if bib.contains_key(id) {
+        if references.contains_key(id) {
             cite_ids.push(id.to_string());
         }
     }
     
     // Fallback to random ones if none found
     if cite_ids.is_empty() {
-        cite_ids = state.references.keys().take(3).cloned().collect();
+        cite_ids = references.keys().take(3).cloned().collect();
+    }
+
+    if cite_ids.is_empty() {
+        return None;
     }
 
     // Only run processor if a class is selected to avoid panics on empty style
-    if intent.class.is_some() && !cite_ids.is_empty() {
+    // Ideally the processor handles this, but for now we play safe
+    if intent.class.is_some() {
         // Create a small bibliography containing only the cited references
-        let bib: Bibliography = state.references.iter()
+        let bib: Bibliography = references.iter()
             .filter(|(k, _)| cite_ids.contains(k))
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect();
@@ -239,13 +226,62 @@ async fn decide_handler(
                     }
                     
                     html.push_str("</div>");
-                    package.preview_html = html;
+                    return Some(html);
                 }
             },
             Err(e) => {
                 println!("Preview generation error: {}", e);
-                // Fallback to the hardcoded preview if generation fails (or show error)
             }
+        }
+    }
+    None
+}
+
+/// Handler for the `/api/v1/decide` endpoint.
+/// 
+/// Receives the current `StyleIntent` from the frontend and determines:
+/// 1. What is missing?
+/// 2. What is the next logical question to ask?
+/// 3. What are the preview options for that question?
+async fn decide_handler(
+    State(state): State<Arc<AppState>>,
+    Json(intent): Json<StyleIntent>
+) -> Json<DecisionPackage> {
+    println!("Handling decide request: {:?}", intent);
+    // Call the engine to determine the next decision based on current intent
+    let mut package = intent.decide();
+
+    // 1. Generate live preview for the CURRENT intent
+    if let Some(html) = generate_preview_html(&intent, &state.references) {
+        package.preview_html = html;
+    }
+
+    // 2. Generate live previews for EACH choice
+    // This allows the user to see exactly what "Numeric" or "Author-Date" looks like
+    // with real data before they click it.
+    for preview in &mut package.previews {
+        // Clone the current intent to simulate the choice
+        match serde_json::to_value(&intent) {
+            Ok(mut intent_val) => {
+                // Merge the choice value into the intent value
+                // This is a simple merge: top-level keys in choice overwrite intent
+                if let Some(obj) = intent_val.as_object_mut() {
+                    if let Some(choice_obj) = preview.choice_value.as_object() {
+                        for (k, v) in choice_obj {
+                            obj.insert(k.clone(), v.clone());
+                        }
+                    }
+                }
+
+                // Deserialize back to StyleIntent
+                if let Ok(temp_intent) = serde_json::from_value::<StyleIntent>(intent_val) {
+                    // Generate preview for this potential future state
+                    if let Some(html) = generate_preview_html(&temp_intent, &state.references) {
+                        preview.html = html;
+                    }
+                }
+            },
+            Err(e) => println!("Error serializing intent: {}", e),
         }
     }
 

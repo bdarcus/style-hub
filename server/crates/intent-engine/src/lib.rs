@@ -42,7 +42,7 @@ impl StyleIntent {
     /// Analyzes the current intent and returns the next decision to be made.
     pub fn decide(&self) -> DecisionPackage {
         let mut missing_fields = Vec::new();
-        if self.base_archetype.is_none() { missing_fields.push("base_archetype".to_string()); }
+        // if self.base_archetype.is_none() { missing_fields.push("base_archetype".to_string()); }
         if self.class.is_none() { missing_fields.push("class".to_string()); }
         if self.author_format.is_none() { missing_fields.push("author_format".to_string()); }
         if self.has_bibliography.is_none() { missing_fields.push("has_bibliography".to_string()); }
@@ -58,17 +58,17 @@ impl StyleIntent {
                 vec![
                     Preview {
                         label: "Parenthetical (Author-Date)".to_string(),
-                        html: "<div class='preview'>(Doe 2023)</div>".to_string(),
+                        html: String::new(),
                         choice_value: serde_json::json!({ "class": "in_text" }),
                     },
                     Preview {
                         label: "Numeric (Vancouver)".to_string(),
-                        html: "<div class='preview'>[1]</div>".to_string(),
+                        html: String::new(),
                         choice_value: serde_json::json!({ "class": "numeric" }),
                     },
                     Preview {
                         label: "Notes (Chicago)".to_string(),
-                        html: "<div class='preview'><sup>1</sup></div>".to_string(),
+                        html: String::new(),
                         choice_value: serde_json::json!({ "class": "note" }),
                     },
                 ]
@@ -83,14 +83,14 @@ impl StyleIntent {
                 vec![
                     Preview {
                         label: "Full List".to_string(),
-                        html: "<div class='preview'>(Doe, Smith, & Jones, 2023)</div>".to_string(),
+                        html: String::new(),
                         choice_value: serde_json::json!({ 
                             "author_format": { "form": "long", "et_al": null } 
                         }),
                     },
                     Preview {
                         label: "Abbreviated (Et Al. after 3)".to_string(),
-                        html: "<div class='preview'>(Doe et al., 2023)</div>".to_string(),
+                        html: String::new(),
                         choice_value: serde_json::json!({ 
                             "author_format": { "form": "long", "et_al": { "min": 3, "use_first": 1 } } 
                         }),
@@ -107,12 +107,12 @@ impl StyleIntent {
                 vec![
                     Preview {
                         label: "Yes, include bibliography".to_string(),
-                        html: "<div class='preview'><b>Bibliography</b><br/>Doe, J. (2023). Title...</div>".to_string(),
+                        html: String::new(),
                         choice_value: serde_json::json!({ "has_bibliography": true }),
                     },
                     Preview {
                         label: "No bibliography".to_string(),
-                        html: "<div class='preview'><i>Just the citations.</i></div>".to_string(),
+                        html: String::new(),
                         choice_value: serde_json::json!({ "has_bibliography": false }),
                     },
                 ]
@@ -131,40 +131,9 @@ impl StyleIntent {
 
     /// Renders a live preview based on current intent fields.
     pub fn render_preview(&self) -> String {
-        let mut html = String::new();
-        html.push_str("<div class='live-preview-content'>");
-        
-        let citation = match self.class {
-            Some(CitationClass::Numeric) => "[1]",
-            Some(CitationClass::Note) => "Doe, \"Title,\" 1.",
-            Some(CitationClass::InText) => {
-                let has_et_al = self.author_format.as_ref()
-                    .and_then(|f| f.et_al.as_ref())
-                    .is_some();
-                if has_et_al {
-                    "(Doe et al., 2023)"
-                } else {
-                    "(Doe, Smith, & Jones, 2023)"
-                }
-            },
-            None => "[Select Citation Class]",
-        };
-
-        html.push_str(&format!("<div class='preview-citation'>{}</div>", citation));
-
-        if self.has_bibliography.unwrap_or(false) {
-            html.push_str("<div class='preview-bibliography'>");
-            html.push_str("<h4>Example Bibliography</h4>");
-            let bib_entry = match self.class {
-                Some(CitationClass::Numeric) => "[1] Doe, J. (2023). <i>Title of Work</i>. Publisher.",
-                _ => "Doe, J., Smith, R., & Jones, A. (2023). <i>Title of Work</i>. Publisher.",
-            };
-            html.push_str(&format!("<div class='bib-entry'>{}</div>", bib_entry));
-            html.push_str("</div>");
-        }
-
-        html.push_str("</div>");
-        html
+        // Preview generation is now handled by the API layer using csln_processor.
+        // We return an empty string here to indicate no static preview is available.
+        String::new()
     }
 
     /// Converts the current intent into a `csln_core::Style` struct.
