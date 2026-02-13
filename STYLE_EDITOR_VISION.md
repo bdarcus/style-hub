@@ -43,18 +43,11 @@ This represents a shift from just an "editor" to a platform where the hierarchy 
 Example data sets per academic discipline (law, sciences, humanities) with diverse reference types and edge cases to validate styles during discovery and editing.
 
 ### 5. Style Persistence
-Export to YAML or JSON; share links. *(User account persistence feasibility TBD)*
+Styles are stored in a PostgreSQL database. Users can save, browse, and edit their styles in a personal library.
 
 ## Architecture Decision
 
-| Option | Recommendation |
-|--------|----------------|
-| Server in this repo | ❌ Scope creep |
-| WASM only | 🤔 Viable but limited |
-| **Separate repo + published crates** | ✅ Clean separation |
-
-**Core crates** (`csln_core`, `csln_processor`) stay here.
-**Web server** lives in separate deployment-focused repo.
+The project follows a full-stack architecture with a Rust backend and a SvelteKit frontend, integrated with a PostgreSQL database and GitHub OAuth for authentication.
 
 ## API Surface Required
 
@@ -74,6 +67,9 @@ GET  /examples/:field       # Field-specific references
 - All processing modes (`author-date`, `numeric`, `note`)
 - Full contributor/date/title configuration
 - YAML ↔ struct roundtrip with serde
+- **User Authentication (GitHub OAuth)**
+- **Style Persistence (PostgreSQL)**
+- **Personal Style Library**
 
 ### 🔍 Needs Enhancement
 - Add `discipline` and/or `category` fields to `StyleInfo`
@@ -90,7 +86,6 @@ GET  /examples/:field       # Field-specific references
 
 1. WASM build as prerequisite, or start server-side?
 2. PDF extraction worth the complexity?
-3. User auth model (OAuth, local storage, etc.)?
 
 ## Relevant Links
 

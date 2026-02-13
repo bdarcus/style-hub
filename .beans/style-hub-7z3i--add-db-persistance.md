@@ -1,7 +1,7 @@
 ---
 # style-hub-7z3i
 title: Add multi-user DB persistence
-status: todo
+status: completed
 type: task
 priority: high
 created_at: 2026-02-13T21:49:35Z

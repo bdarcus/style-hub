@@ -295,7 +295,7 @@ impl StyleIntent {
         };
 
         if let Some(p) = preset {
-             let mut wrap = match self.class {
+             let wrap = match self.class {
                  Some(CitationClass::AuthorDate) => Some(csln_core::template::WrapPunctuation::Parentheses),
                  _ => None,
              };

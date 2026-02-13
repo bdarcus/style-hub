@@ -2,11 +2,11 @@
     "name": "style-editor",
     "private": true,
     "scripts": {
-        "dev:client": "npm --prefix client run dev",
+        "dev:client": "cd client && ${PM:-$(command -v bun >/dev/null 2>&1 && echo bun || echo npm)} run dev",
         "dev:server": "cargo run -p style-editor-api",
-        "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
-        "build": "npm --prefix client run build && cargo build --release",
-        "check": "npm --prefix client run check && cargo check --workspace"
+        "dev": "concurrently \"${PM:-$(command -v bun >/dev/null 2>&1 && echo bun || echo npm)} run dev:client\" \"${PM:-$(command -v bun >/dev/null 2>&1 && echo bun || echo npm)} run dev:server\"",
+        "build": "cd client && ${PM:-$(command -v bun >/dev/null 2>&1 && echo bun || echo npm)} run build && cargo build --release",
+        "check": "cd client && ${PM:-$(command -v bun >/dev/null 2>&1 && echo bun || echo npm)} run check && cargo check --workspace"
     },
     "devDependencies": {
         "concurrently": "^8.2.2"

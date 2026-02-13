@@ -4,13 +4,63 @@
     import DecisionWizard from '$lib/components/DecisionWizard.svelte';
     import { onMount } from 'svelte';
     import { intent } from '$lib/stores/intent';
+    import { auth } from '$lib/stores/auth';
+    import { goto } from '$app/navigation';
     import type { DecisionPackage, Preview } from '$lib/types/bindings';
 
     let currentDecision: DecisionPackage | null = $state(null);
+    let isSaving = $state(false);
+    let saveMessage = $state('');
 
     function handleDecision(event: CustomEvent<DecisionPackage | null>) {
         currentDecision = event.detail;
     }
+
+    async function saveStyle() {
+        if (!$auth.user) return;
+        
+        isSaving = true;
+        // Don't show "Saving..." text for auto-saves to avoid flicker
+        // unless it's the first save or a manual save
+        
+        try {
+            const res = await fetch('http://localhost:3000/api/styles', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${$auth.token}`
+                },
+                body: JSON.stringify({
+                    title: 'My Custom Style', 
+                    intent: $intent,
+                    csln: '', 
+                })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                // We could store the style ID to update the same record
+                // For now, it creates a new one or we'd need to track it
+            }
+        } catch (e) {
+            console.error('Auto-save failed', e);
+        } finally {
+            isSaving = false;
+        }
+    }
+
+    // Auto-save logic
+    let autoSaveTimeout: any;
+    $effect(() => {
+        // Watch intent store
+        const currentIntent = $intent;
+        if ($auth.user && Object.values(currentIntent).some(v => v !== null)) {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                saveStyle();
+            }, 3000); // 3 second debounce
+        }
+    });
 
     const progress = $derived(currentDecision ? Math.round(((4 - currentDecision.missing_fields.length) / 4) * 100) : 0);
     const isComplete = $derived(currentDecision && !currentDecision.question);
@@ -30,10 +80,24 @@
 
                 <!-- Title & Progress -->
                 <div class="flex flex-col gap-2 mb-8">
-                    <h1 class="text-2xl font-black text-text-main tracking-tight">Create New Style</h1>
+                    <div class="flex justify-between items-start">
+                        <h1 class="text-2xl font-black text-text-main tracking-tight">Create New Style</h1>
+                        {#if $auth.user}
+                            <button 
+                                onclick={saveStyle}
+                                disabled={isSaving}
+                                class="text-[10px] font-bold uppercase tracking-widest text-primary hover:text-primary-dark transition-colors disabled:opacity-50">
+                                {isSaving ? 'Saving...' : 'Save to Library'}
+                            </button>
+                        {/if}
+                    </div>
                     <p class="text-text-secondary text-sm">
                         {isComplete ? 'Configuration Complete' : 'Refine your citation style'}
                     </p>
+
+                    {#if saveMessage}
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-green-600 mt-2">{saveMessage}</p>
+                    {/if}
 
                     <div class="mt-4 flex flex-col gap-2">
                         <div class="flex justify-between items-end">
