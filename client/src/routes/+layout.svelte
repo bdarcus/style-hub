@@ -1,14 +1,23 @@
 <script lang="ts">
     import favicon from '$lib/assets/favicon.svg';
     import '../index.css';
+    import { auth } from '$lib/stores/auth';
 
     let { children } = $props();
+
+    function handleLogin() {
+        window.location.href = 'http://localhost:3000/auth/github';
+    }
+
+    function handleLogout() {
+        auth.logout();
+    }
 </script>
 
 <svelte:head>
     <link rel="icon" href={favicon} />
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
     <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300;1,400&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <title>CSL Style Hub</title>
@@ -25,14 +34,27 @@
         </a>
         <div class="hidden md:flex flex-1 justify-end gap-8">
             <nav class="flex items-center gap-9">
-                <a class="text-sm font-medium text-slate-600 hover:text-primary transition-colors" href="/">Browse</a>
+                <a class="text-sm font-medium text-slate-600 hover:text-primary transition-colors" href="/library/browse">Browse</a>
                 <a class="text-sm font-medium text-slate-600 hover:text-primary transition-colors" href="/create-wizard">Wizard</a>
+                {#if $auth.user}
+                    <a class="text-sm font-medium text-slate-600 hover:text-primary transition-colors" href="/library">My Library</a>
+                {/if}
                 <a class="text-sm font-medium text-slate-600 hover:text-primary transition-colors" href="/">Docs</a>
             </nav>
             <div class="flex gap-2">
-                <button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-slate-200 hover:bg-slate-300 text-slate-900 text-sm font-bold transition-colors">
-                    Sign In
-                </button>
+                {#if $auth.user}
+                    <button 
+                        onclick={handleLogout}
+                        class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-slate-200 hover:bg-slate-300 text-slate-900 text-sm font-bold transition-colors">
+                        Sign Out
+                    </button>
+                {:else}
+                    <button 
+                        onclick={handleLogin}
+                        class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-white hover:bg-primary-dark text-sm font-bold transition-colors">
+                        Sign In
+                    </button>
+                {/if}
             </div>
         </div>
     </header>
@@ -60,7 +82,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-12">
                 <div class="flex flex-col gap-4">
                     <h4 class="text-xs font-black text-slate-900 uppercase tracking-widest">Platform</h4>
-                    <a class="text-sm text-slate-500 hover:text-primary" href="/">Browse</a>
+                    <a class="text-sm text-slate-500 hover:text-primary" href="/library/browse">Browse</a>
                     <a class="text-sm text-slate-500 hover:text-primary" href="/create-wizard">Wizard</a>
                     <a class="text-sm text-slate-500 hover:text-primary" href="/">API</a>
                 </div>
